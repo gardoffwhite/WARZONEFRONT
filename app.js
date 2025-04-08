@@ -1,73 +1,169 @@
-
-const apiBase = "https://warzonebackend-3il3.onrender.com";
-
-let token = "";
+const API = "https://warzonebackend-3il3.onrender.com";
 let currentUser = null;
+let token = "";
+let isAdmin = false;
 
-async function login(username, password) {
-  const res = await fetch(apiBase + "/api/login", {
+const loginBox = document.getElementById("loginBox");
+const mainApp = document.getElementById("mainApp");
+const adminPanel = document.getElementById("adminPanel");
+const tokenCountEl = document.getElementById("tokenCount");
+const gachaResultEl = document.getElementById("gachaResult");
+const welcomeMsg = document.getElementById("welcomeMsg");
+
+async function login() {
+  const username = document.getElementById("loginUsername").value;
+  const password = document.getElementById("loginPassword").value;
+  const res = await fetch(`${API}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
   const data = await res.json();
-  if (data.token) {
+  if (data.success) {
     token = data.token;
-    currentUser = data.user;
-    renderApp();
+    currentUser = username;
+    isAdmin = data.role === "admin";
+    showInterface();
+    loadToken();
+    if (isAdmin) {
+      loadAdmin();
+    }
   } else {
-    alert("เข้าสู่ระบบไม่สำเร็จ");
+    alert(data.message || "เข้าสู่ระบบล้มเหลว");
   }
 }
 
 function logout() {
   token = "";
   currentUser = null;
-  renderLogin();
+  isAdmin = false;
+  loginBox.classList.remove("hidden");
+  mainApp.classList.add("hidden");
+  adminPanel.classList.add("hidden");
 }
 
-function renderLogin() {
-  document.getElementById("root").innerHTML = `
-    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md">
-      <h2 class="text-2xl font-bold mb-4">🔐 เข้าสู่ระบบ</h2>
-      <input id="username" type="text" placeholder="ชื่อผู้ใช้" class="w-full px-3 py-2 rounded-xl text-black mb-2"/>
-      <input id="password" type="password" placeholder="รหัสผ่าน" class="w-full px-3 py-2 rounded-xl text-black mb-4"/>
-      <button onclick="handleLogin()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl w-full">เข้าสู่ระบบ</button>
-    </div>
-  `;
+function showInterface() {
+  loginBox.classList.add("hidden");
+  if (isAdmin) {
+    adminPanel.classList.remove("hidden");
+  } else {
+    mainApp.classList.remove("hidden");
+    welcomeMsg.textContent = `ยินดีต้อนรับ, ${currentUser}`;
+  }
 }
 
-async function handleLogin() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-  await login(username, password);
-}
-
-function renderApp() {
-  document.getElementById("root").innerHTML = `
-    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md text-center">
-      <h2 class="text-2xl font-bold mb-4">🎁 สุ่มไอเท็ม</h2>
-      <p class="mb-2">ยินดีต้อนรับ <b>${currentUser.username}</b></p>
-      <button onclick="gacha()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl w-full text-lg font-semibold mb-2">กดสุ่ม!</button>
-      <button onclick="logout()" class="text-sm text-red-400 underline">ออกจากระบบ</button>
-      <div id="result" class="mt-4 text-xl"></div>
-    </div>
-  `;
-}
-
-async function gacha() {
-  const res = await fetch(apiBase + "/api/gacha", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + token,
-      "Content-Type": "application/json"
-    }
+async function loadToken() {
+  const res = await fetch(`${API}/user-info`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
-  document.getElementById("result").innerHTML = `
-    <img src="${data.image}" class="mx-auto mb-2 max-h-40 animate-bounce"/>
-    คุณได้รับ: <b>${data.name}</b>
-  `;
+  tokenCountEl.textContent = data.token;
 }
 
-renderLogin();
+async function rollGacha() {
+  const characterName = document.getElementById("characterName").value;
+  if (!characterName) return alert("กรุณาใส่ชื่อตัวละคร");
+
+  const btn = document.getElementById("gachaButton");
+  btn.disabled = true;
+  btn.textContent = "กำลังสุ่ม...";
+
+  const res = await fetch(`${API}/gacha`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ characterName }),
+  });
+  const data = await res.json();
+  if (data.success) {
+    tokenCountEl.textContent = data.remainingTokens;
+
+    // สล็อตเลื่อนลงแบบง่าย
+    gachaResultEl.innerHTML = `
+      <div class="overflow-hidden h-32 relative bg-black rounded-lg border-2 border-purple-600">
+        <div class="animate-slide-down text-center p-4">
+          <img src="${data.item.image}" alt="${data.item.name}" class="mx-auto h-16 mb-1"/>
+          <p class="font-bold text-xl text-yellow-400">${data.item.name}</p>
+        </div>
+      </div>
+    `;
+  } else {
+    alert(data.message || "สุ่มล้มเหลว");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "กดสุ่ม!";
+}
+
+// ========== แอดมินฟีเจอร์ ==========
+
+async function loadAdmin() {
+  loadGachaLogs();
+  loadItemRates();
+}
+
+async function loadGachaLogs() {
+  const res = await fetch(`${API}/gacha-logs`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  const logList = document.getElementById("logList");
+  logList.innerHTML = "";
+  data.logs.forEach((log) => {
+    const li = document.createElement("li");
+    li.textContent = `🎲 [${log.date}] ${log.username} (${log.characterName}) ได้รับ ${log.itemName}`;
+    logList.appendChild(li);
+  });
+}
+
+async function loadItemRates() {
+  const res = await fetch(`${API}/item-rates`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  const container = document.getElementById("itemRates");
+  container.innerHTML = "";
+  data.items.forEach((item) => {
+    const row = document.createElement("div");
+    row.innerHTML = `
+      <input type="text" value="${item.name}" disabled class="w-1/3 px-2 py-1 rounded text-black" />
+      <input type="number" value="${item.rate}" data-id="${item.id}" class="w-1/4 px-2 py-1 rounded text-black rate-input" />
+    `;
+    container.appendChild(row);
+  });
+}
+
+async function updateItemRates() {
+  const inputs = document.querySelectorAll(".rate-input");
+  const updates = Array.from(inputs).map((input) => ({
+    id: input.dataset.id,
+    rate: parseInt(input.value),
+  }));
+  const res = await fetch(`${API}/update-item-rates`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rates: updates }),
+  });
+  const data = await res.json();
+  document.getElementById("itemRateMsg").textContent = data.message;
+}
+
+async function adjustToken() {
+  const username = document.getElementById("manageUsername").value;
+  const amount = parseInt(document.getElementById("manageAmount").value);
+  const res = await fetch(`${API}/adjust-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ username, amount }),
+  });
+  const data = await res.json();
+  document.getElementById("adjustTokenMsg").textContent = data.message;
+}
