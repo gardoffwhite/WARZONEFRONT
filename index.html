@@ -1,14 +1,60 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nage Gacha</title>
+  <title>Nage Token Gacha</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-4">
-  <div id="root"></div>
+  <h1 class="text-4xl font-bold mb-6">🎮 Nage MMORPG - ระบบสุ่มไอเท็ม</h1>
+
+  <!-- Login Box -->
+  <div id="loginBox" class="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-4">🔐 เข้าสู่ระบบ</h2>
+    <input type="text" id="loginUsername" placeholder="ชื่อผู้ใช้" class="w-full px-3 py-2 rounded-xl text-black mb-2" />
+    <input type="password" id="loginPassword" placeholder="รหัสผ่าน" class="w-full px-3 py-2 rounded-xl text-black mb-4" />
+    <button onclick="login()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl w-full text-lg font-semibold mb-2">เข้าสู่ระบบ</button>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainApp" class="hidden bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md mt-6">
+    <h2 class="text-2xl font-bold mb-4">🎁 ระบบสุ่มไอเท็ม</h2>
+    <p id="welcomeMsg" class="mb-2"></p>
+    <p id="tokenDisplay" class="mb-4">คุณมี Token: <span class="font-bold" id="tokenCount">0</span></p>
+    <input type="text" id="characterName" placeholder="ชื่อตัวละคร" class="w-full px-3 py-2 rounded-xl text-black mb-2" />
+    <button id="gachaButton" onclick="rollGacha()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl w-full text-lg font-semibold">กดสุ่ม!</button>
+    <div id="gachaResult" class="mt-4"></div>
+    <button onclick="logout()" class="mt-4 text-sm text-red-400 underline">ออกจากระบบ</button>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel" class="hidden bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-2xl mt-6">
+    <h2 class="text-2xl font-bold mb-4 text-yellow-300">🛠 แผงควบคุมแอดมิน</h2>
+
+    <!-- Token Manager -->
+    <div class="mb-6">
+      <h3 class="text-xl mb-2">➕ เพิ่ม/ลด Token ให้ผู้ใช้</h3>
+      <input type="text" id="manageUsername" placeholder="ชื่อผู้ใช้" class="px-3 py-2 rounded-xl text-black mb-2 w-1/3" />
+      <input type="number" id="manageAmount" placeholder="จำนวน (+/-)" class="px-3 py-2 rounded-xl text-black mb-2 w-1/3" />
+      <button onclick="adjustToken()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl">อัปเดต</button>
+      <p id="adjustTokenMsg" class="text-sm mt-2"></p>
+    </div>
+
+    <!-- Item Rate Manager -->
+    <div class="mb-6">
+      <h3 class="text-xl mb-2">🎯 จัดการอัตราสุ่มไอเท็ม</h3>
+      <div id="itemRates" class="space-y-2"></div>
+      <button onclick="updateItemRates()" class="mt-2 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl">บันทึกอัตราสุ่ม</button>
+      <p id="itemRateMsg" class="text-sm mt-2"></p>
+    </div>
+
+    <!-- Gacha Logs -->
+    <h3 class="text-xl mb-2">📜 ประวัติการสุ่ม</h3>
+    <ul id="logList" class="mb-4 text-sm max-h-64 overflow-y-auto bg-gray-700 p-2 rounded-lg"></ul>
+    <button onclick="logout()" class="mt-4 text-sm text-red-400 underline">ออกจากระบบ</button>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
